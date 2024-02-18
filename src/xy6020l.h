@@ -6,6 +6,12 @@
  * The data type of interfaces to physical values are in decimal, scaled almost in 0.01.
  *
  * Tested only on a Arduino Pro Micro clone from China
+ *
+ * Special thanks to user g-radmac for his discovery of the UART protocol!
+ * References: 
+ *   https://forum.allaboutcircuits.com/threads/exploring-programming-a-xy6020l-power-supply-via-modbus.197022/
+ *   https://www.simplymodbus.ca/FAQ.htm
+ *   
  * 
  * @author Jens Gleissberg
  * @date 2024
