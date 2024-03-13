@@ -33,7 +33,7 @@ void setup() {
 
   ts = millis();
 
-  vOutMin= 250; // start with 2,5 V
+  vOutMin= 300; // start with 3,0 V
   vOutMax= 450; // max voltage
   vIn = 1700; 
   boActive = false;
@@ -72,6 +72,9 @@ void loop() {
       }
     }
 
+    if(xy.getLockOn() )
+      xy.setLockOn(false);
+
     if(boActive)
     {
         // target: 
@@ -84,7 +87,7 @@ void loop() {
           vDiff=-200;
 
         if(vDiff < 0)
-          vOut+= vDiff;
+          vOut+= 2*vDiff;
         else
           vOut+= vDiff /10;
 

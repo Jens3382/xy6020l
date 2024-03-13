@@ -22,17 +22,17 @@
  *     - rx bytes and HReg of written HReg
  * > 9 - rx bytes (basic RS232 communication)
  */
-#define __debug__ 0
+#define __debug__ 10
 
 /** @brief period for reading content of all hold regs, in msec  */
 #define PERIOD_READ_ALL_HREGS 200
 /** @brief answer timeout of tx message: 7 x 10 ms */
 #define PERIOD_TIMEOUT_RESPONSE 7 
 
-xy6020l::xy6020l(Stream& serial)
+xy6020l::xy6020l(Stream& serial, byte add)
 {
   mSerial= &serial;
-  mAdr=1;
+  mAdr=add;
   mRxBufIdx =  0;
   mRxFrameCnt=0; 
   mTxBufIdx =  0;
@@ -66,7 +66,7 @@ bool xy6020l::RxDecode03( byte cnt)
   Serial.print(tmpBuf);
   for(int i=0; i < NB_HREGS; i++)
   {
-    sprintf( tmpBuf, "%d(%4d) ", i, hRegs[i]);
+    sprintf( tmpBuf, "%X(%4d) ", i, hRegs[i]);
     Serial.print(tmpBuf);
   }
   Serial.print("\n");
@@ -166,7 +166,7 @@ void xy6020l::task()
       if (millis() > mTs + PERIOD_READ_ALL_HREGS) 
       {
         mTs = millis();
-        SendReadHReg(0, 20 );
+        SendReadHReg(0, 0x1E );
       }
     }
   }
@@ -210,10 +210,12 @@ void xy6020l::SendReadHReg( word startReg, word endReg)
   }
 }
 
-void xy6020l::setHReg(byte nr, word value)
+bool xy6020l::setHReg(byte nr, word value)
 {
+  bool retVal=false;
+
   // tx buffer free?
-  if(mTxBufIdx == 0)
+  if(mTxBufIdx == 0) 
   {
     mTxBuf[0]= mAdr;
     mTxBuf[1]= 0x06;
@@ -223,7 +225,9 @@ void xy6020l::setHReg(byte nr, word value)
     mTxBuf[5]= value & 0xFF;    
     CRCModBus(6);
     mTxBufIdx=8;
+    retVal= true;
   }
+  return (retVal);
 }
 
 void xy6020l::CRCModBus(int datalen)
@@ -247,3 +251,17 @@ void xy6020l::CRCModBus(int datalen)
   mTxBuf[datalen] = (byte)(crc & 0xFF);
   mTxBuf[datalen + 1] = (byte)((crc >> 8) & 0xFF);
 }
+
+bool xy6020l::setSlaveAdd( word add) 
+{ 
+  bool retVal= true;
+  if( setHReg(HREG_IDX_SLAVE_ADD, add & (word)0x00FF ) )
+  {
+    // change address only if command could be places in tx buffer !
+    //mAdr= add;
+  }
+  else
+    retVal=false;
+
+  return retVal;
+};
