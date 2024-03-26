@@ -16,7 +16,7 @@
 #include "xy6020l.h"
 
 // dcdc's MBus is connected to Serial1 of Arduino
-xy6020l xy(Serial1);
+xy6020l xy(Serial1, 1);
 
 long ts;
 bool  boActive;
@@ -37,6 +37,14 @@ void setup() {
   vOutMax= 450; // max voltage
   vIn = 1700; 
   boActive = false;
+
+  xy.setPreset(01);
+  while(!xy.TxBufEmpty())
+    xy.task();
+
+  xy.setOutput(false);
+  while(!xy.TxBufEmpty())
+    xy.task();
 }
 
 void loop() {
@@ -44,18 +52,15 @@ void loop() {
   char tmpBuf[30];  // text buffer for serial messages
 
   xy.task();
-  
-  // 500 ms  control period
-  if (millis() > ts + 500) 
+  if(xy.HRegUpdated())
   {
-    ts = millis();
 
     vIn = xy.getInV();
     // 15 V -> undervoltage of solar panel 
     if(vIn < 1500 )
     {
       // output off
-      xy.setOutput(0);  
+      xy.setOutputB(false);  
       boActive = false;
       // reset cell voltage to its min value
       vOut= vOutMin;
@@ -68,38 +73,49 @@ void loop() {
         boActive= true;
         // output on
         if(!xy.getOutputOn() )
-          xy.setOutput(1);  
+          xy.setOutputB(true);  
       }
     }
 
     if(xy.getLockOn() )
       xy.setLockOn(false);
+    if(xy.getProtect()>0)
+    {
+      xy.setProtect(0);
+    }
 
     if(boActive)
     {
-        // target: 
-        // the input voltage must be kept at 19 V
-        // @todo I part depents on voltage difference and slope
-        vDiff= (int)vIn - (int)1900;
+      // target: 
+      // the input voltage must be kept at 18..19 V
+      // @todo I part depents on voltage difference and slope
+      vDiff= (int)vIn - (int)1900;
+      // 1 V dead band -> no change
+      if(vDiff < 70 && vDiff > -70)
+        vDiff=0;
+      else
+      {
         if(vDiff > 200)
           vDiff=200;
-        if(vDiff < 200)
+        if(vDiff < -200)
           vDiff=-200;
 
-        if(vDiff < 0)
-          vOut+= 2*vDiff;
-        else
+        if(vDiff > 0)  
           vOut+= vDiff /10;
+        else
+          vOut+= vDiff ;
 
         if(vOut > vOutMax)
           vOut = vOutMax;
         if(vOut < vOutMin)
           vOut = vOutMin;
-        xy.setCV( vOut );
+        xy.setCVB( vOut );
+
+      }
     }
 
-    // print control results:
-    sprintf( tmpBuf, "%d: %d   Out=%d\n", vIn, vOut, boActive);
-    Serial.print(tmpBuf);
+    // print control results: - switched to save runtime -
+    //sprintf( tmpBuf, "%d: %d   Out=%d\n", vIn, vOut, boActive);
+    //Serial.print(tmpBuf);
   }
 }

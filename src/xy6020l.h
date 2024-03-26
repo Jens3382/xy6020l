@@ -16,6 +16,7 @@
  * @author Jens Gleissberg
  * @date 2024
  * @license GNU Lesser General Public License v3.0 or later
+ *
  */
 
 #ifndef xy6020l_h
@@ -25,6 +26,7 @@
 
 // the XY6020 provides 31 holding registers
 #define NB_HREGS 31
+#define NB_MEMREGS 14
 
 // Holding Register index
 // set voltage
@@ -68,27 +70,89 @@
 #define HREG_IDX_TEMP_OFS 0x1A
 #define HREG_IDX_TEMP_EXT_OFS 0x1B
 #define HREG_IDX_MEMORY 0x1D
+// Memory register
+#define HREG_IDX_M0 0x50
+#define HREG_IDX_M_OFFSET 0x10
+#define HREG_IDX_M_VSET 0
+#define HREG_IDX_M_ISET 1
+#define HREG_IDX_M_SLVP 2
+#define HREG_IDX_M_SOVP 3
+#define HREG_IDX_M_SOCP 4
+#define HREG_IDX_M_SOPP 5
+#define HREG_IDX_M_SOHPH 6
+#define HREG_IDX_M_SOHPM 7
+#define HREG_IDX_M_SOAHL 8
+#define HREG_IDX_M_SOAHH 9
+#define HREG_IDX_M_SOWHL 10
+#define HREG_IDX_M_SOWHH 11
+#define HREG_IDX_M_SOTP  12
+#define HREG_IDX_M_SINI  13
 
 
+#define TX_RING_BUFFER_SIZE 16
+typedef struct {
+  byte mHregIdx;
+  word mValue;
+} txRingEle;
+
+class TxRingBuffer
+{
+  private:
+    txRingEle* mpIn;
+    txRingEle* mpOut;
+    int mIn;
+    txRingEle mTxBuf[TX_RING_BUFFER_SIZE];
+  public:
+    TxRingBuffer();
+    bool IsEmpty() { return (mIn<1);};
+    bool IsFull() { return (mIn>=TX_RING_BUFFER_SIZE);}
+    bool AddTx(txRingEle* pTxEle);
+    bool AddTx(byte hRegIdx, word value);
+    bool GetTx(txRingEle& pTxEle);
+};
+
+typedef struct {
+    byte Nr;
+    word VSet;
+    word ISet;
+    word sLVP;
+    word sOVP;
+    word sOCP;
+    word sOPP;
+    word sOHPh;
+    word sOHPm;
+    unsigned long sOAH;
+    unsigned long sOWH;
+    word sOTP;
+    word sINI;
+} tMemory;
 
 /**
  * @class xy6020l
  * @brief Class for controlling the XY6020L DCDC converter
  */
+/** @brief option flags */
+#define XY6020_OPT_SKIP_SAME_HREG_VALUE 1
+#define XY6020_OPT_NO_HREG_UPDATE 2
+
 class xy6020l 
 {
   public:
     /**
      * @brief Constructor requires an interface to serial port
      * @param serial Stream object reference (i.e., Serial1)
-     * @param add slave address of the xy device, can be change by setSlaveAdd command
+     * @param adr slave address of the xy device, can be change by setSlaveAdd command
+     * @param txPeriod minimum period to wait for next tx message, at times < 50 ms the XY6020 does not send answers
      */
-    xy6020l(Stream& serial, byte add);
+    xy6020l(Stream& serial, byte adr=1, byte txPeriod=50, byte options=XY6020_OPT_SKIP_SAME_HREG_VALUE );
     /**
      * @brief Task method that must be called in loop() function of the main program cyclically.
      * It automatically triggers the reading of the Holding Registers each PERIOD_READ_ALL_HREGS ms.
      */
-    void task();
+    void task(void);
+
+    /** @brief true if the Hold Regs are read after read all register command, asynchron access */
+    bool HRegUpdated(void);
 
     /// @name XY6020L application layer: HReg register access
     /// @{
@@ -96,10 +160,12 @@ class xy6020l
     /** @brief voltage setpoint, LSB: 0.01 V , R/W  */
     word getCV(void) { return (word)hRegs[ HREG_IDX_CV]; };
     void setCV( word cv) { setHReg(HREG_IDX_CV, cv);};
+    bool setCVB( word cv) { return mTxRingBuffer.AddTx(HREG_IDX_CV, cv);};
 
     /** @brief constant current  setpoint, LSB: 0.01 A , R/W  */
     word getCC() { return (word)hRegs[ HREG_IDX_CC]; };
     void setCC(word cc) { setHReg(HREG_IDX_CC, cc);};
+    bool setCCB( word cc) { return mTxRingBuffer.AddTx(HREG_IDX_CC, cc);};
 
     /** @brief actual input voltage , LSB: 0.01 V, readonly  */
     word getInV() { return (word)hRegs[ HREG_IDX_IN_V ]; };
@@ -127,7 +193,8 @@ class xy6020l
 
     /** @brief lock switch, true = on, R/W   */
     bool getLockOn() { return hRegs[ HREG_IDX_LOCK]>0?true:false; };
-    bool setLockOn(bool onState) { return setHReg(HREG_IDX_LOCK, onState?1:0);};
+    bool setLockOn(bool onState)  { return setHReg(HREG_IDX_LOCK, onState?1:0);};
+    bool setLockOnB(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_LOCK, onState?1:0);};
 
     /** @brief lock switch, true = on, R/W   */
     word getProtect() { return hRegs[ HREG_IDX_PROTECT]; };
@@ -141,6 +208,7 @@ class xy6020l
     /** @brief output switch, true = on, R/W   */
     bool getOutputOn() { return hRegs[ HREG_IDX_OUTPUT_ON]>0?true:false; };
     bool setOutput(bool onState) { return setHReg(HREG_IDX_OUTPUT_ON, onState?1:0);};
+    bool setOutputB(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_OUTPUT_ON, onState?1:0);};
 
     /** @brief set the temperature unit to °C, read not implemended because no use  */
     bool setTempAsCelsius(void)  { return setHReg(HREG_IDX_FC, 0);};
@@ -169,38 +237,60 @@ class xy6020l
     bool setTempExtOfs( word tempOfs) { return setHReg(HREG_IDX_TEMP_EXT_OFS, tempOfs );};
 
     /** @brief Presets, R/W  */
-    word loadPreset(void) { return (word)hRegs[ HREG_IDX_MEMORY]; };
-    bool savePreset( word preset) { return setHReg(HREG_IDX_MEMORY, preset );};
-
+    word getPreset(void) { return (word)hRegs[ HREG_IDX_MEMORY]; };
+    bool setPreset( word preset) { return setHReg(HREG_IDX_MEMORY, preset );};
     /// @}
-
+    
+    bool TxBufEmpty(void) { return ((mTxBufIdx<=0)&&(mTxRingBuffer.IsEmpty()));};
+    void SetMemory(tMemory& mem);
+    bool GetMemory(tMemory* pMem);
+    void PrintMemory(tMemory& mem);
 
   private:
     byte          mAdr;
+    byte          mOptions;
     Stream*       mSerial;
-    byte            mRxBufIdx;
-    unsigned char  mRxBuf[60];
-    byte            mRxState;
-    bool           mRxThis;
-    byte            mRxSize;
-    word           mRxFrameCnt;
+    byte          mRxBufIdx;
+    unsigned char mRxBuf[60];
+    byte          mRxState;
+    bool          mRxThis;
+    byte          mRxSize;
+    word          mRxFrameCnt;
+    word          mRxFrameCntLast;
+    byte          mLastExceptionCode;
 
-    enum        Response { None, Confirm, Data };
-    Response    mResponse;
-    long        mTs;
-    long        mTO;
-    long        mTLastTx;
-    byte        mCntTO;
+    enum          Response { None, Confirm, Data };
+    Response      mResponse;
+    /** @brief rx answer belongs to memory request data
+     *   M0..M9 -> 0..9 ;  255 no memory   */
+    byte          mMemory; 
+    long          mTs;
+    long          mTO;
+    long          mTLastTx;
+    byte          mCntTO;
+    byte          mTxPeriod;
 
-    int            mTxBufIdx;
-    unsigned char  mTxBuf[30];
+    int           mTxBufIdx;
+    unsigned char mTxBuf[40];
+    TxRingBuffer  mTxRingBuffer;
 
-    word           hRegs[NB_HREGS];
+    /** @brief buffer to cache hold regs after reading them at once and to check if update needed for writting regs */
+    word          hRegs[NB_HREGS];
+    /** @brief 1 cache for memory register */
+    word          mMem[NB_MEMREGS];
+    enum          MemoryState { Send, Wait };
+    MemoryState   mMemoryState;
+    word          mMemoryLastFrame;
 
     bool setHReg(byte nr, word value);
+    bool setHRegFromBuf(void);
+
     void CRCModBus(int datalen);
+    void RxDecodeExceptions(byte cnt);
     bool RxDecode03( byte cnt);
     bool RxDecode06( byte cnt);
-    void SendReadHReg( word startReg, word endReg);
+    bool RxDecode16( byte cnt);
+    void SendReadHReg( word startReg, word nbRegs);
+    void setMemoryRegs(byte HRegIdx);
 };
 #endif
