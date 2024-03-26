@@ -6,33 +6,38 @@ The library implements a simplified ModBus implementation for data link layer. T
 
 Tested only on a Arduino Pro Micro clone from China
 
-Special thanks to user g-radmac of allaboutcircuits forum for his discovery of the UART protocol! 
+Special thanks to users: 
+ - **g-radmac** on allaboutcircuits forum for his discovery of the UART protocol! 
+ - **RikBen68** for informing me about the existing manual from [tinkering4fun](https://github.com/tinkering4fun/XY6020L-Modbus/tree/main) and the valuable improvement tips.
+
+## General
+
+- No blocking program flow
+- cached voltage and current set commands 
+- automatic update of internal register from XY6020L
+
 
 ## References: 
+- [Translation from chinese manual from user tinkering4fun](https://github.com/tinkering4fun/XY6020L-Modbus/tree/main)
 - [@allaboutcircuits: Exploring programming a XY6020L power supply via modbus](https://forum.allaboutcircuits.com/threads/exploring-programming-a-xy6020l-power-supply-via-modbus.197022/)
 - [Simply Modbus FAQ](https://www.simplymodbus.ca/FAQ.htm)
 
-## Holding Registers
+## Example Applications
 
-| Register | Content |
-|-------|-----------|
-| 0 | set voltage, LSB: 0.01 V|
-| 1 | set current, LSB: 0.01 A |
-| 2 | actual voltage, LSB: 0.01 V |
-| 3 | actual current, LSB: 0.01 A |
-| 4 | actual output power, LSB: 0.1 W |
-| 5 | input voltage, LSB:  0.01 V |
-| 6 | output charge, LSB:  0.001 Ah |
-| 7 | output charge high, no checked! |
-| 8 | output energy, LSB:  0.001 Wh |
-| 9 | output energy high, no checked! |
-| 10 | on time  [h] |
-| 11 | on time  [min] |
-| 12 | on time  [s] |
-| 13 | temperature, LSB:  0.1 °C |
-| 18 | output on |
+### Setup and read memory registers
 
-## Example Application
+**dcdcmbus.ino**
+
+- prints diagnosis via USB serial port
+- prints model and version number
+    
+- sets °C as temperature unit
+- writes 3 memory presets as example
+- prints settings of all 10 memory
+
+### Max Power Point tracker for solar driven electrolytic cell
+
+**dcdcmbus.ino**
 
 Usage of XY6020L DCDC for simple max power point tracking of 
 a solar module driving a electrolytic cell
