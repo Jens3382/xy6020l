@@ -48,7 +48,8 @@ If the registers are to be changed, set methods are available. For the registers
  - constant voltage: setCV( word cv)
  - constant current: setCC( word cc)
  - output state: setOutput(bool onState)
- - output lock: setLockOn(bool onState)
+ - output lock: setLockOn(bool onState)  
+  
 the write accesses are temporarily stored in a ring buffer so that no update is lost if the send buffer is still full.
 
 **Data Type** 
