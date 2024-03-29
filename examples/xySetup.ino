@@ -52,6 +52,9 @@ void loop() {
     switch( task)
     {
       case 4:
+        xy.ReadAllHRegs();
+        while(!xy.HRegUpdated())
+          xy.task();
         sprintf( tmpBuf, "\nM:%04X V:%04X\n", xy.getModel(), xy.getVersion() );
         Serial.print(tmpBuf);
         task++;
@@ -95,7 +98,7 @@ void loop() {
         Mem.VSet =  300;
         Mem.ISet =  500;
         Mem.sLVP = 1000;
-        Mem.sOVP =  520;
+        Mem.sOVP =  920;
         Mem.sOCP =  420;
         Mem.sOPP =   40;
         Mem.sOHPh= 0;

@@ -30,8 +30,6 @@
 /** @brief answer timeout of tx message: 4 x 10 ms */
 #define PERIOD_TIMEOUT_RESPONSE 4 
 
-
-
 TxRingBuffer::TxRingBuffer()
 {
   mpIn = &(mTxBuf[0]);
@@ -56,8 +54,10 @@ bool TxRingBuffer::AddTx(txRingEle* pTxEle)
     if(mpIn == &(mTxBuf[TX_RING_BUFFER_SIZE]))
       mpIn = &(mTxBuf[0]);
 
+    #if __debug__ > 2  
     sprintf( tmpBuf, "\nRing In: %d\n", mIn);
     Serial.print(tmpBuf);
+    #endif
   }
   return retVal;
 }
@@ -107,6 +107,17 @@ xy6020l::xy6020l(Stream& serial, byte adr, byte txPeriod, byte options )
   mTLastTx = mTs;
 };
 
+bool xy6020l::ReadAllHRegs(void)
+{
+  bool retValue=false;
+  if( mTxBufIdx == 0 )
+  {
+    SendReadHReg(0, NB_HREGS-1 );  
+    retValue= true;
+  }
+  return retValue;
+}
+
 bool xy6020l::HRegUpdated(void)
 {
   bool retValue=false;
@@ -152,7 +163,7 @@ bool xy6020l::RxDecode03( byte cnt)
   sprintf( tmpBuf, "\nDec03:%d: ", mRxBuf[1]);
   Serial.print(tmpBuf);
   #endif
-  #if __debug__ > 9  
+  #if __debug__ > 2  
   if(mMemory > 10 )
   {
     for(int i=0; i < NB_HREGS; i++)

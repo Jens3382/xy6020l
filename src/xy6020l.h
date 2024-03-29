@@ -151,6 +151,10 @@ class xy6020l
      */
     void task(void);
 
+    /** @brief requests to read all Hold Registers, reception from XY6020 can be checked via HRegUpdated and data access via read/get methods 
+        @return false if tx buffer is full 
+    */
+    bool ReadAllHRegs(void);
     /** @brief true if the Hold Regs are read after read all register command, asynchron access */
     bool HRegUpdated(void);
 
@@ -159,13 +163,11 @@ class xy6020l
     // 
     /** @brief voltage setpoint, LSB: 0.01 V , R/W  */
     word getCV(void) { return (word)hRegs[ HREG_IDX_CV]; };
-    void setCV( word cv) { setHReg(HREG_IDX_CV, cv);};
-    bool setCVB( word cv) { return mTxRingBuffer.AddTx(HREG_IDX_CV, cv);};
+    bool setCV( word cv) { return mTxRingBuffer.AddTx(HREG_IDX_CV, cv);};
 
     /** @brief constant current  setpoint, LSB: 0.01 A , R/W  */
     word getCC() { return (word)hRegs[ HREG_IDX_CC]; };
-    void setCC(word cc) { setHReg(HREG_IDX_CC, cc);};
-    bool setCCB( word cc) { return mTxRingBuffer.AddTx(HREG_IDX_CC, cc);};
+    bool setCC( word cc) { return mTxRingBuffer.AddTx(HREG_IDX_CC, cc);};
 
     /** @brief actual input voltage , LSB: 0.01 V, readonly  */
     word getInV() { return (word)hRegs[ HREG_IDX_IN_V ]; };
@@ -193,8 +195,7 @@ class xy6020l
 
     /** @brief lock switch, true = on, R/W   */
     bool getLockOn() { return hRegs[ HREG_IDX_LOCK]>0?true:false; };
-    bool setLockOn(bool onState)  { return setHReg(HREG_IDX_LOCK, onState?1:0);};
-    bool setLockOnB(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_LOCK, onState?1:0);};
+    bool setLockOn(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_LOCK, onState?1:0);};
 
     /** @brief lock switch, true = on, R/W   */
     word getProtect() { return hRegs[ HREG_IDX_PROTECT]; };
@@ -207,8 +208,7 @@ class xy6020l
 
     /** @brief output switch, true = on, R/W   */
     bool getOutputOn() { return hRegs[ HREG_IDX_OUTPUT_ON]>0?true:false; };
-    bool setOutput(bool onState) { return setHReg(HREG_IDX_OUTPUT_ON, onState?1:0);};
-    bool setOutputB(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_OUTPUT_ON, onState?1:0);};
+    bool setOutput(bool onState) { return mTxRingBuffer.AddTx(HREG_IDX_OUTPUT_ON, onState?1:0);};
 
     /** @brief set the temperature unit to °C, read not implemended because no use  */
     bool setTempAsCelsius(void)  { return setHReg(HREG_IDX_FC, 0);};

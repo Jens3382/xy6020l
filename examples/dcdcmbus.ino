@@ -57,10 +57,10 @@ void loop() {
 
     vIn = xy.getInV();
     // 15 V -> undervoltage of solar panel 
-    if(vIn < 1500 )
+    if(vIn < 1300 )
     {
       // output off
-      xy.setOutputB(false);  
+      xy.setOutput(false);  
       boActive = false;
       // reset cell voltage to its min value
       vOut= vOutMin;
@@ -73,7 +73,7 @@ void loop() {
         boActive= true;
         // output on
         if(!xy.getOutputOn() )
-          xy.setOutputB(true);  
+          xy.setOutput(true);  
       }
     }
 
@@ -90,8 +90,8 @@ void loop() {
       // the input voltage must be kept at 18..19 V
       // @todo I part depents on voltage difference and slope
       vDiff= (int)vIn - (int)1900;
-      // 1 V dead band -> no change
-      if(vDiff < 70 && vDiff > -70)
+      //  dead band -> no change
+      if(vDiff < 70 && vDiff > -100)
         vDiff=0;
       else
       {
@@ -109,7 +109,7 @@ void loop() {
           vOut = vOutMax;
         if(vOut < vOutMin)
           vOut = vOutMin;
-        xy.setCVB( vOut );
+        xy.setCV( vOut );
 
       }
     }
